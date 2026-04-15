@@ -55,7 +55,6 @@ tr:last-child td{border-bottom:none;}
 <body>
 <div class="container">
   <h1>📋 出欠管理｜先生画面</h1>
-
   <div id="setup-area">
     <div class="card">
       <h2>事前準備：QRコード確認</h2>
@@ -67,7 +66,6 @@ tr:last-child td{border-bottom:none;}
         <p style="font-size:12px;color:#999;margin-top:0.5rem;">このQRをスクリーンショットしてスライドに貼ってください</p>
       </div>
     </div>
-
     <div class="card">
       <h2>講義情報</h2>
       <label>講義名</label>
@@ -75,7 +73,6 @@ tr:last-child td{border-bottom:none;}
       <label>回数</label>
       <input type="number" id="lec-num" value="1" min="1">
     </div>
-
     <div class="card">
       <h2>GPS不正防止</h2>
       <div class="checkbox-row">
@@ -93,10 +90,8 @@ tr:last-child td{border-bottom:none;}
         <div id="gps-status" class="status" style="display:none;"></div>
       </div>
     </div>
-
     <button class="btn btn-primary" onclick="startSession()">受付を開始する</button>
   </div>
-
   <div id="active-area">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem;">
@@ -110,7 +105,6 @@ tr:last-child td{border-bottom:none;}
         <div class="info-cell"><div class="lbl">GPS</div><div class="val" id="d-gps"></div></div>
       </div>
     </div>
-
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
         <div>
@@ -123,7 +117,6 @@ tr:last-child td{border-bottom:none;}
     </div>
   </div>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -137,22 +130,15 @@ const firebaseConfig = {
   messagingSenderId: "357767871355",
   appId: "1:357767871355:web:0670c7cbf5082ec2d19bde"
 };
-
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyXi5ocqQclnEkoNE3XsDmW0nT2dUjmrTZ56JMwLmcCXdkSFhv2o-Oz6iwHIkMKdQAPHg/exec';
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
 let currentSession = null;
 let attendees = [];
 let knownIds = new Set();
-
-// GPS有効/無効切り替え
 document.getElementById('gps-enabled').addEventListener('change', function(){
   document.getElementById('gps-options').style.display = this.checked ? '' : 'none';
 });
-
-// 起動時：既存セッション確認
 db.ref('session').once('value', snap => {
   const data = snap.val();
   if (data && data.active === true) {
@@ -161,8 +147,6 @@ db.ref('session').once('value', snap => {
     listenAttendees();
   }
 });
-
-// QR生成
 window.generateQR = function() {
   const studentUrl = location.href.replace('teacher.html', 'student.html');
   const wrap = document.getElementById('qr-preview-wrap');
@@ -171,23 +155,19 @@ window.generateQR = function() {
   document.getElementById('qr-url').textContent = studentUrl;
   document.getElementById('qr-preview-area').style.display = '';
 };
-
-// GPS取得
 window.getGPS = function() {
   const el = document.getElementById('gps-status');
   el.textContent = '取得中...'; el.className = 'status warn'; el.style.display = '';
   navigator.geolocation.getCurrentPosition(pos => {
     document.getElementById('gps-lat').value = pos.coords.latitude.toFixed(6);
     document.getElementById('gps-lng').value = pos.coords.longitude.toFixed(6);
-    el.textContent = `✓ 取得完了（精度±${Math.round(pos.coords.accuracy)}m）`;
+    el.textContent = '✓ 取得完了（精度±' + Math.round(pos.coords.accuracy) + 'm）';
     el.className = 'status ok';
   }, () => {
     el.textContent = '取得失敗。手動で入力してください。';
     el.className = 'status err';
   }, { enableHighAccuracy: true, timeout: 10000 });
 };
-
-// 受付開始
 window.startSession = function() {
   const lec = document.getElementById('lec-name').value.trim();
   const num = parseInt(document.getElementById('lec-num').value);
@@ -197,20 +177,15 @@ window.startSession = function() {
   const radius = parseInt(document.getElementById('gps-radius').value);
   if (!lec || !num) { alert('講義名と回を入力してください'); return; }
   if (gpsEnabled && (isNaN(lat) || isNaN(lng))) { alert('教室の緯度・経度を入力してください'); return; }
-
   attendees = [];
   knownIds = new Set();
   const dateStr = new Date().toLocaleDateString('ja-JP');
   currentSession = { lec, num, active: true, date: dateStr, gps: gpsEnabled ? { lat, lng, radius } : null };
-
   db.ref('session').set(currentSession);
-  db.ref(`attendance/${lec}__${num}/meta`).set({ lec, num, date: dateStr });
-
+  db.ref('attendance/' + lec + '__' + num + '/meta').set({ lec, num, date: dateStr });
   showActiveUI();
   listenAttendees();
 };
-
-// 受付終了
 window.closeSession = function() {
   if (!confirm('受付を終了しますか？')) return;
   db.ref('session').set({ active: false });
@@ -222,69 +197,58 @@ window.closeSession = function() {
   attendees = [];
   knownIds = new Set();
 };
-
 function showActiveUI() {
   document.getElementById('setup-area').style.display = 'none';
   document.getElementById('active-area').style.display = '';
   document.getElementById('d-lec').textContent = currentSession.lec;
   document.getElementById('d-num').textContent = currentSession.num;
   document.getElementById('d-date').textContent = currentSession.date;
-  document.getElementById('d-gps').textContent = currentSession.gps ? `有効（±${currentSession.gps.radius}m）` : '無効';
+  document.getElementById('d-gps').textContent = currentSession.gps ? '有効（±' + currentSession.gps.radius + 'm）' : '無効';
 }
-
 function listenAttendees() {
   if (!currentSession) return;
-  const key = `${currentSession.lec}__${currentSession.num}`;
-  db.ref(`attendance/${key}/attendees`).on('value', snap => {
+  const key = currentSession.lec + '__' + currentSession.num;
+  db.ref('attendance/' + key + '/attendees').on('value', snap => {
     const all = snap.val() ? Object.values(snap.val()) : [];
     all.forEach(a => {
       if (!knownIds.has(a.id)) {
         knownIds.add(a.id);
-        sendToSheet({ ...a, lec: currentSession.lec, num: currentSession.num });
+        sendToSheet(Object.assign({}, a, { lec: currentSession.lec, num: currentSession.num }));
       }
     });
     attendees = all;
     renderList();
   });
 }
-
 async function sendToSheet(entry) {
   try {
-    await fetch(GAS_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry)
-    });
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry) });
   } catch(e) { console.warn('GAS送信失敗:', e); }
 }
-
 function renderList() {
   document.getElementById('live-count').textContent = attendees.length;
   const wrap = document.getElementById('list-wrap');
   if (attendees.length === 0) { wrap.innerHTML = '<p class="empty">まだ出席者がいません</p>'; return; }
   let h = '<table><thead><tr><th>#</th><th>氏名</th><th>学籍番号</th><th>時刻</th><th>GPS</th></tr></thead><tbody>';
-  attendees.forEach((a, i) => {
+  attendees.forEach(function(a, i) {
     const t = new Date(a.time).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-    const gps = a.gpsSkipped ? '<span class="badge gray">未検証</span>'
-      : a.gpsOk ? `<span class="badge ok">✓${Math.round(a.distance)}m</span>`
-      : '<span class="badge err">NG</span>';
-    h += `<tr><td class="sub">${i+1}</td><td><b>${a.name}</b></td><td class="sub">${a.id}</td><td class="sub">${t}</td><td>${gps}</td></tr>`;
+    const gps = a.gpsSkipped ? '<span class="badge gray">未検証</span>' : a.gpsOk ? '<span class="badge ok">✓' + Math.round(a.distance) + 'm</span>' : '<span class="badge err">NG</span>';
+    h += '<tr><td class="sub">' + (i+1) + '</td><td><b>' + a.name + '</b></td><td class="sub">' + a.id + '</td><td class="sub">' + t + '</td><td>' + gps + '</td></tr>';
   });
   h += '</tbody></table>';
   wrap.innerHTML = h;
 }
-
 window.exportCSV = function() {
   if (attendees.length === 0) { alert('出席者がいません'); return; }
   let csv = '番号,氏名,学籍番号,登録時刻,GPS\n';
-  attendees.forEach((a, i) => {
-    const gps = a.gpsSkipped ? '未検証' : a.gpsOk ? `OK(${Math.round(a.distance)}m)` : 'NG';
-    csv += `${i+1},${a.name},${a.id},${new Date(a.time).toLocaleString('ja-JP')},${gps}\n`;
+  attendees.forEach(function(a, i) {
+    const gps = a.gpsSkipped ? '未検証' : a.gpsOk ? 'OK(' + Math.round(a.distance) + 'm)' : 'NG';
+    csv += (i+1) + ',' + a.name + ',' + a.id + ',' + new Date(a.time).toLocaleString('ja-JP') + ',' + gps + '\n';
   });
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `出席_${currentSession.lec}_第${currentSession.num}回.csv`;
+  a.download = '出席_' + currentSession.lec + '_第' + currentSession.num + '回.csv';
   a.click();
 };
 </script>
